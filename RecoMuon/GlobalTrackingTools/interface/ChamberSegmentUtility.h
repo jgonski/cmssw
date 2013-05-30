@@ -7,8 +7,8 @@
  *  Description:
  *  utility class for the dynamical truncation algorithm
  *
- *  $Date: 2010/06/27 17:32:41 $
- *  $Revision: 1.3 $
+ *  $Date: 2013/05/28 15:46:29 $
+ *  $Revision: 1.4 $
  *
  *  Authors :
  *  D. Pagano & G. Bruno - UCL Louvain
@@ -51,10 +51,10 @@ class ChamberSegmentUtility {
   const std::map<int, std::vector<CSCSegment> >& getCSClist() const { return cscsegMap; };
 
   // Get the map association between segments4d and rechits
-  std::vector<DTRecHit1D> getDTRHmap(DTRecSegment4D);
+  std::vector<DTRecHit1D> getDTRHmap(const DTRecSegment4D&);
 
   // Get the map association between segments4d and rechits 
-  std::vector<CSCRecHit2D> getCSCRHmap(CSCSegment);
+  std::vector<CSCRecHit2D> getCSCRHmap(const CSCSegment&);
 
   
  private:
