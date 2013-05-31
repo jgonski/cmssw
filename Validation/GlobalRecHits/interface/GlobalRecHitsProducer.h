@@ -7,8 +7,8 @@
  *  containing information about various sub-systems in global coordinates 
  *  with full geometry
  *
- *  $Date: 2012/12/26 22:56:50 $
- *  $Revision: 1.19 $
+ *  $Date: 2013/05/28 18:03:30 $
+ *  $Revision: 1.20 $
  *  \author M. Strang SUNY-Buffalo
  */
 
@@ -312,8 +312,8 @@ class GlobalRecHitsProducer : public edm::EDProducer
   // Does the real job
   template  <typename type>
     int compute(const DTGeometry *dtGeom,
-		 std::map<DTWireId, std::vector<PSimHit> > simHitsPerWire,
-		 std::map<DTWireId, std::vector<type> > recHitsPerWire,
+		 const std::map<DTWireId, std::vector<PSimHit> >& simHitsPerWire,
+		 const std::map<DTWireId, std::vector<type> >& recHitsPerWire,
 		 int step);
 
   // CSC

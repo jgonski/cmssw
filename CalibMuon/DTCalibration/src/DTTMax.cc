@@ -1,8 +1,8 @@
 /*
  *  See header file for a description of this class.
  *
- *  $Date: 2009/05/13 13:25:04 $
- *  $Revision: 1.8 $
+ *  $Date: 2013/05/23 15:28:45 $
+ *  $Revision: 1.9 $
  *  \author Marina Giunta
  */
 
@@ -20,7 +20,7 @@ using namespace std;
 using namespace dttmaxenums;
 using namespace DTEnums;
 
-DTTMax::InfoLayer::InfoLayer(DTRecHit1D rh_, const DTSuperLayer & isl, GlobalVector dir,
+DTTMax::InfoLayer::InfoLayer(const DTRecHit1D& rh_, const DTSuperLayer & isl, GlobalVector dir,
 			     GlobalPoint pos, DTTTrigBaseSync* sync):
   rh(rh_), idWire(rh.wireId()), lr(rh.lrSide()) {
     const DTLayer*  layer = isl.layer(idWire.layerId());

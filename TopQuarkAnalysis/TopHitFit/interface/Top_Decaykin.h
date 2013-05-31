@@ -1,5 +1,5 @@
 //
-// $Id: Top_Decaykin.h,v 1.1 2011/05/26 09:46:53 mseidel Exp $
+// $Id: Top_Decaykin.h,v 1.2 2013/05/28 17:55:59 gartung Exp $
 //
 // File: hitfit/Top_Decaykin.h
 // Purpose: Calculate some kinematic quantities for ttbar events.
@@ -239,9 +239,9 @@ public:
 
      @param top The four-momentum of top.
    */
-  static double cos_theta_star(const Fourvec fermion,
-                               const Fourvec W,
-                               const Fourvec top);
+  static double cos_theta_star(const Fourvec& fermion,
+                               const Fourvec& W,
+                               const Fourvec& top);
 
   // Solve cos theta star in lepton side of lepton+jets event
   /**

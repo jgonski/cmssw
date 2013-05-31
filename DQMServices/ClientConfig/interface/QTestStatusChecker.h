@@ -7,8 +7,8 @@
  *  DQMStore) and fills string maps containing the alarms
  *
  * 
- *  $Date: 2009/11/12 11:24:34 $
- *  $Revision: 1.7 $
+ *  $Date: 2013/05/23 16:16:28 $
+ *  $Revision: 1.8 $
  *  \author Ilaria Segoni
   */
 
@@ -29,7 +29,7 @@ class QTestStatusChecker{
 	std::map< std::string, std::vector<std::string> > checkDetailedStatus(DQMStore * bei);
 	
 	std::vector<std::string> fullPathNames(DQMStore * bei);
-	void processAlarms(std::vector<std::string> allPathNames, DQMStore * bei);
+	void processAlarms(const std::vector<std::string>& allPathNames, DQMStore * bei);
  
  
  private:

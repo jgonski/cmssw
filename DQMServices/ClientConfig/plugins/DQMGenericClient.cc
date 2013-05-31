@@ -2,8 +2,8 @@
  *  Class:DQMGenericClient 
  *
  *
- *  $Date: 2012/10/16 10:05:33 $
- *  $Revision: 1.34 $
+ *  $Date: 2013/05/23 16:16:28 $
+ *  $Revision: 1.35 $
  * 
  *  \author Junghwan Goh - SungKyunKwan University
  */
@@ -782,7 +782,8 @@ void DQMGenericClient::limitedFit(MonitorElement * srcME, MonitorElement * meanM
 
 //=================================
 
-void DQMGenericClient::findAllSubdirectories (std::string dir, std::set<std::string> * myList, TString pattern = "") {
+void DQMGenericClient::findAllSubdirectories (std::string dir, std::set<std::string> * myList, const TString& _pattern = TString("")) {
+  TString pattern = _pattern;
   if (!theDQM->dirExists(dir)) {
     LogError("DQMGenericClient") << " DQMGenericClient::findAllSubdirectories ==> Missing folder " << dir << " !!!"; 
     return;

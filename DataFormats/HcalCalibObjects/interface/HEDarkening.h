@@ -1,5 +1,5 @@
-#ifndef HcalPlugins_HEDarkening_h
-#define HcalPlugins_HEDarkening_h
+#ifndef HcalCalibObjects_HEDarkening_h
+#define HcalCalibObjects_HEDarkening_h
 //
 // Simple class with parameterizaed function to get darkening attenuation 
 // coefficiant for SLHC conditions
