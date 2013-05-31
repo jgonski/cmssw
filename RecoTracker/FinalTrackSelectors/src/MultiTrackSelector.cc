@@ -2,10 +2,14 @@
 
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 #include "DataFormats/Common/interface/ValueMap.h"
+#include "CondFormats/DataRecord/interface/GBRWrapperRcd.h"
+#include "FWCore/Framework/interface/EventSetup.h"
+#include "FWCore/Framework/interface/ESHandle.h" 
 
 //#include "RecoTracker/DebugTools/interface/FixTrackHitPattern.h"
 #include <Math/DistFunc.h>
 #include "TMath.h"
+#include "TFile.h"
 
 using reco::modules::MultiTrackSelector;
 
@@ -18,6 +22,28 @@ MultiTrackSelector::MultiTrackSelector( const edm::ParameterSet & cfg ) :
   // now get the pset for each selector
 {
 
+  useAnyMVA_ = false;
+  forestLabel_ = "MVASelectorIter0";
+  std::string type = "BDTG";
+  useForestFromDB_ = true;
+  dbFileName_ = "";
+
+  forest_ = 0;
+  gbrVals_ = 0;
+
+  if(cfg.exists("useAnyMVA")) useAnyMVA_ = cfg.getParameter<bool>("useAnyMVA");
+
+  if(useAnyMVA_){
+    gbrVals_ = new float[11];
+    if(cfg.exists("mvaType"))type = cfg.getParameter<std::string>("mvaType");
+    if(cfg.exists("GBRForestLabel"))forestLabel_ = cfg.getParameter<std::string>("GBRForestLabel");
+    if(cfg.exists("GBRForestFileName")){
+      dbFileName_ = cfg.getParameter<std::string>("GBRForestFileName");
+      useForestFromDB_ = false;
+    }
+
+     mvaType_ = type;
+  }
   std::vector<edm::ParameterSet> trkSelectors( cfg.getParameter<std::vector< edm::ParameterSet> >("trackSelectors") );
   qualityToSet_.reserve(trkSelectors.size());
   vtxNumber_.reserve(trkSelectors.size());
@@ -47,6 +73,12 @@ MultiTrackSelector::MultiTrackSelector( const edm::ParameterSet & cfg ) :
   max_lostHitFraction_.reserve(trkSelectors.size());
   min_eta_.reserve(trkSelectors.size());
   max_eta_.reserve(trkSelectors.size());
+  useMVA_.reserve(trkSelectors.size());
+  //mvaReaders_.reserve(trkSelectors.size());
+  min_MVA_.reserve(trkSelectors.size());
+  //mvaType_.reserve(trkSelectors.size());
+
+  produces<edm::ValueMap<float> >("MVAVals");
 
   for ( unsigned int i=0; i<trkSelectors.size(); i++) {
 
@@ -128,10 +160,28 @@ MultiTrackSelector::MultiTrackSelector( const edm::ParameterSet & cfg ) :
 
     //    produces<std::vector<int> >(name_[i]).setBranchAlias( name_[i] + "TrackQuals");
     produces<edm::ValueMap<int> >(name_[i]).setBranchAlias( name_[i] + "TrackQuals");
+    if(useAnyMVA_){
+      bool thisMVA = false;
+      if(trkSelectors[i].exists("useMVA"))thisMVA = trkSelectors[i].getParameter<bool>("useMVA");
+      useMVA_.push_back(thisMVA);
+      if(thisMVA){
+	double minVal = -1;
+	if(trkSelectors[i].exists("minMVA"))minVal = trkSelectors[i].getParameter<double>("minMVA");
+	min_MVA_.push_back(minVal);
+
+      }else{
+	min_MVA_.push_back(-9999.0);
+      }
+    }else{
+      min_MVA_.push_back(-9999.0);
+    }
+
   }
 }
 
 MultiTrackSelector::~MultiTrackSelector() {
+  if(gbrVals_)delete [] gbrVals_;
+  if(!useForestFromDB_ && forest_)delete forest_;
 }
 
 void MultiTrackSelector::produce( edm::Event& evt, const edm::EventSetup& es ) 
@@ -143,21 +193,23 @@ void MultiTrackSelector::produce( edm::Event& evt, const edm::EventSetup& es )
   // Get tracks 
   Handle<TrackCollection> hSrcTrack;
   evt.getByLabel( src_, hSrcTrack );
+  const TrackCollection& srcTracks(*hSrcTrack);
 
   // looking for the beam spot
   edm::Handle<reco::BeamSpot> hBsp;
   evt.getByLabel(beamspot_, hBsp);
-  reco::BeamSpot vertexBeamSpot;
-  vertexBeamSpot = *hBsp;
+  const reco::BeamSpot& vertexBeamSpot(*hBsp);
+
 	
   // Select good primary vertices for use in subsequent track selection
   edm::Handle<reco::VertexCollection> hVtx;
   if (useVertices_) evt.getByLabel(vertices_, hVtx);
 
-  unsigned int trkSize=hSrcTrack->size();
+  unsigned int trkSize=srcTracks.size();
   std::vector<int> selTracksSave( qualityToSet_.size()*trkSize,0);
-  
-  //loop over all of the selectors...
+
+  processMVA(evt,es);
+
   for (unsigned int i=0; i<qualityToSet_.size(); i++) {  
     std::vector<int> selTracks(trkSize,0);
     auto_ptr<edm::ValueMap<int> > selTracksValueMap = auto_ptr<edm::ValueMap<int> >(new edm::ValueMap<int>);
@@ -169,7 +221,7 @@ void MultiTrackSelector::produce( edm::Event& evt, const edm::EventSetup& es )
 
     // Loop over tracks
     size_t current = 0;
-    for (TrackCollection::const_iterator it = hSrcTrack->begin(), ed = hSrcTrack->end(); it != ed; ++it, ++current) {
+    for (TrackCollection::const_iterator it = srcTracks.begin(), ed = srcTracks.end(); it != ed; ++it, ++current) {
       const Track & trk = * it;
       // Check if this track passes cuts
 
@@ -178,17 +230,19 @@ void MultiTrackSelector::produce( edm::Event& evt, const edm::EventSetup& es )
       //already removed
       bool ok=true;
       if (preFilter_[i]<i && selTracksSave[preFilter_[i]*trkSize+current] < 0) {
-	selTracks.at(current)=-1;
+	selTracks[current]=-1;
 	ok=false;
 	if ( !keepAllTracks_[i]) 
 	  continue;
       }
       else {
-	ok = select(i,vertexBeamSpot, trk, points, vterr, vzerr);
+	double mvaVal = 0;
+	if(useAnyMVA_)mvaVal = mvaVals_[current];
+	ok = select(i,vertexBeamSpot, trk, points, vterr, vzerr,mvaVal);
 	if (!ok) { 
 	  LogTrace("TrackSelection") << "track with pt="<< trk.pt() << " NOT selected";
 	  if (!keepAllTracks_[i]) { 
-	    selTracks.at(current)=-1;
+	    selTracks[current]=-1;
 	    continue;
 	  }
 	}
@@ -197,24 +251,24 @@ void MultiTrackSelector::produce( edm::Event& evt, const edm::EventSetup& es )
       }
 
       if (preFilter_[i]<i ) {
-	selTracks.at(current)=selTracksSave[preFilter_[i]*trkSize+current];
+	selTracks[current]=selTracksSave[preFilter_[i]*trkSize+current];
       }
       else {
-	selTracks.at(current)=trk.qualityMask();
+	selTracks[current]=trk.qualityMask();
       }
       if ( ok && setQualityBit_[i]) {
-	selTracks.at(current)= (selTracks.at(current) | (1<<qualityToSet_[i]));
+	selTracks[current]= (selTracks[current] | (1<<qualityToSet_[i]));
 	if (!points.empty()) {
 	  if (qualityToSet_[i]==TrackBase::loose) {
-	    selTracks.at(current)=(selTracks.at(current) | (1<<TrackBase::looseSetWithPV));
+	    selTracks[current]=(selTracks[current] | (1<<TrackBase::looseSetWithPV));
 	  }
 	  else if (qualityToSet_[i]==TrackBase::highPurity) {
-	    selTracks.at(current)=(selTracks.at(current) | (1<<TrackBase::highPuritySetWithPV));
+	    selTracks[current]=(selTracks[current] | (1<<TrackBase::highPuritySetWithPV));
 	  }
 	}
       }
     }
-    for ( unsigned int j=0; j< trkSize; j++ ) selTracksSave[j+i*trkSize]=selTracks.at(j);
+    for ( unsigned int j=0; j< trkSize; j++ ) selTracksSave[j+i*trkSize]=selTracks[j];
     filler.insert(hSrcTrack, selTracks.begin(),selTracks.end());
     filler.fill();
 
@@ -229,7 +283,8 @@ void MultiTrackSelector::produce( edm::Event& evt, const edm::EventSetup& es )
 				 const reco::Track &tk, 
 				 const std::vector<Point> &points,
 				 std::vector<float> &vterr,
-				 std::vector<float> &vzerr) {
+				 std::vector<float> &vzerr,
+				 double mvaVal) {
   // Decide if the given track passes selection cuts.
 
   using namespace std; 
@@ -287,6 +342,20 @@ void MultiTrackSelector::produce( edm::Event& evt, const edm::EventSetup& es )
   if (minLost > max_minMissHitOutOrIn_[tsNum]) return false;
   float lostMidFrac = tk.numberOfLostHits() / (tk.numberOfValidHits() + tk.numberOfLostHits());
   if (lostMidFrac > max_lostHitFraction_[tsNum]) return false;
+
+
+
+  ///////////////////////////////////////////////
+  //Adding the MVA selection before vertex cuts//
+  ///////////////////////////////////////////////
+
+  if(useAnyMVA_ && useMVA_[tsNum]){
+    if(mvaVal < min_MVA_[tsNum])return false;
+  }
+
+  ////////////////////////////////
+  //End of MVA selection section//
+  ////////////////////////////////
 
   //other track parameters
   float d0 = -tk.dxy(vertexBeamSpot.position()), d0E =  tk.d0Error(),
@@ -382,4 +451,98 @@ void MultiTrackSelector::produce( edm::Event& evt, const edm::EventSetup& es )
       toTake--; if (toTake == 0) break;
     }
   }
+}
+
+void MultiTrackSelector::processMVA(edm::Event& evt, const edm::EventSetup& es)
+{
+
+  using namespace std; 
+  using namespace edm;
+  using namespace reco;
+
+  // Get tracks 
+  Handle<TrackCollection> hSrcTrack;
+  evt.getByLabel( src_, hSrcTrack );
+  const TrackCollection& srcTracks(*hSrcTrack);
+
+  auto_ptr<edm::ValueMap<float> >mvaValValueMap = auto_ptr<edm::ValueMap<float> >(new edm::ValueMap<float>);
+  edm::ValueMap<float>::Filler mvaFiller(*mvaValValueMap);
+
+  mvaVals_.clear();
+
+  if(!useAnyMVA_){
+    size_t current = 0;
+    for (TrackCollection::const_iterator it = srcTracks.begin(), ed = srcTracks.end(); it != ed; ++it, ++current) {
+      mvaVals_.push_back(-99.0);
+    }
+    mvaFiller.insert(hSrcTrack,mvaVals_.begin(),mvaVals_.end());
+    mvaFiller.fill();
+    evt.put(mvaValValueMap,"MVAVals");
+    return;
+  }
+
+  if(!forest_){
+    if(useForestFromDB_){
+      edm::ESHandle<GBRForest> forestHandle;
+      es.get<GBRWrapperRcd>().get(forestLabel_,forestHandle);
+      forest_ = (GBRForest*)forestHandle.product();
+    }else{
+      TFile gbrfile(dbFileName_.c_str());
+      forest_ = (GBRForest*)gbrfile.Get(forestLabel_.c_str());
+    }
+  }
+    
+
+
+  size_t current = 0;
+  for (TrackCollection::const_iterator it = srcTracks.begin(), ed = srcTracks.end(); it != ed; ++it, ++current) {
+    const Track & trk = * it;
+    tmva_ndof_ = trk.ndof();
+    tmva_nlayers_ = trk.hitPattern().trackerLayersWithMeasurement();
+    tmva_nlayers3D_ = trk.hitPattern().pixelLayersWithMeasurement() + trk.hitPattern().numberOfValidStripLayersWithMonoAndStereo();
+    tmva_nlayerslost_ = trk.hitPattern().trackerLayersWithoutMeasurement();
+    float chi2n =  trk.normalizedChi2();
+    float chi2n_no1Dmod = chi2n;
+    
+    int count1dhits = 0;
+    for (trackingRecHit_iterator ith = trk.recHitsBegin(), edh = trk.recHitsEnd(); ith != edh; ++ith) {
+      const TrackingRecHit * hit = ith->get();
+      if (hit->isValid()) {
+	if (typeid(*hit) == typeid(SiStripRecHit1D)) ++count1dhits;
+      }
+    }
+    if (count1dhits > 0) {
+      float chi2 = trk.chi2();
+      float ndof = trk.ndof();
+      chi2n = (chi2+count1dhits)/float(ndof+count1dhits);
+    }
+    tmva_chi2n_ = chi2n;
+    tmva_chi2n_no1dmod_ = chi2n_no1Dmod;
+    tmva_eta_ = trk.eta();
+    tmva_relpterr_ = float(trk.ptError())/std::max(float(trk.pt()),0.000001f);
+    tmva_nhits_ = trk.numberOfValidHits();
+    int lostIn = trk.trackerExpectedHitsInner().numberOfLostTrackerHits();
+    int lostOut = trk.trackerExpectedHitsOuter().numberOfLostTrackerHits();
+    int minLost = std::min(lostIn,lostOut);      tmva_minlost_ = minLost;
+    tmva_lostmidfrac_ = trk.numberOfLostHits() / (trk.numberOfValidHits() + trk.numberOfLostHits());
+
+    gbrVals_[0] = tmva_lostmidfrac_;
+    gbrVals_[1] = tmva_minlost_;
+    gbrVals_[2] = tmva_nhits_;
+    gbrVals_[3] = tmva_relpterr_;
+    gbrVals_[4] = tmva_eta_;
+    gbrVals_[5] = tmva_chi2n_no1dmod_;
+    gbrVals_[6] = tmva_chi2n_;
+    gbrVals_[7] = tmva_nlayerslost_;
+    gbrVals_[8] = tmva_nlayers3D_;
+    gbrVals_[9] = tmva_nlayers_;
+    gbrVals_[10] = tmva_ndof_;
+
+    double gbrVal = forest_->GetClassifier(gbrVals_);
+    mvaVals_.push_back((float)gbrVal);
+  }
+  mvaFiller.insert(hSrcTrack,mvaVals_.begin(),mvaVals_.end());
+  mvaFiller.fill();
+  evt.put(mvaValValueMap,"MVAVals");
+
 }

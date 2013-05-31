@@ -3,8 +3,8 @@ import FWCore.ParameterSet.Config as cms
 # NEW CLUSTERS (remove previously used clusters)
 lowPtTripletStepClusters = cms.EDProducer("TrackClusterRemover",
     clusterLessSolution= cms.bool(True),
-    trajectories = cms.InputTag("initialStepTracks"),
-    overrideTrkQuals = cms.InputTag('initialStepSelector','initialStep'),
+    trajectories = cms.InputTag("lowPtQuadStepTracks"),
+    overrideTrkQuals = cms.InputTag('lowPtQuadStepSelector','lowPtQuadStep'),
     TrackQuality = cms.string('highPurity'),
     minNumberOfLayersWithMeasBeforeFiltering = cms.int32(0),
     pixelClusters = cms.InputTag("siPixelClusters"),
@@ -17,7 +17,14 @@ lowPtTripletStepClusters = cms.EDProducer("TrackClusterRemover",
 # SEEDING LAYERS
 import RecoTracker.TkSeedingLayers.PixelLayerTriplets_cfi
 lowPtTripletStepSeedLayers = RecoTracker.TkSeedingLayers.PixelLayerTriplets_cfi.pixellayertriplets.clone(
-    ComponentName = 'lowPtTripletStepSeedLayers'
+    ComponentName = cms.string('lowPtTripletStepSeedLayers'),
+    layerList = cms.vstring('BPix1+BPix2+BPix3', 'BPix2+BPix3+BPix4',
+                            'BPix1+BPix3+BPix4', 'BPix1+BPix2+BPix4',
+                            'BPix2+BPix3+FPix1_pos', 'BPix2+BPix3+FPix1_neg',
+                            'BPix1+BPix2+FPix1_pos', 'BPix1+BPix2+FPix1_neg',
+                            'BPix2+FPix1_pos+FPix2_pos', 'BPix2+FPix1_neg+FPix2_neg',
+                            'BPix1+FPix1_pos+FPix2_pos', 'BPix1+FPix1_neg+FPix2_neg',
+                            'FPix1_pos+FPix2_pos+FPix3_pos', 'FPix1_neg+FPix2_neg+FPix3_neg')
     )
 lowPtTripletStepSeedLayers.BPix.skipClusters = cms.InputTag('lowPtTripletStepClusters')
 lowPtTripletStepSeedLayers.FPix.skipClusters = cms.InputTag('lowPtTripletStepClusters')
@@ -29,8 +36,8 @@ lowPtTripletStepSeeds = RecoTracker.TkSeedGenerator.GlobalSeedsFromTriplets_cff.
     RegionFactoryPSet = RegionPsetFomBeamSpotBlock.clone(
     ComponentName = cms.string('GlobalRegionProducerFromBeamSpot'),
     RegionPSet = RegionPsetFomBeamSpotBlock.RegionPSet.clone(
-    ptMin = 0.2,
-    originRadius = 0.02,
+    ptMin = 0.45,
+    originRadius = 0.015,
     nSigmaZ = 4.0
     )
     )
@@ -39,7 +46,8 @@ lowPtTripletStepSeeds.OrderedHitsFactoryPSet.SeedingLayers = 'lowPtTripletStepSe
 
 from RecoPixelVertexing.PixelLowPtUtilities.ClusterShapeHitFilterESProducer_cfi import *
 lowPtTripletStepSeeds.OrderedHitsFactoryPSet.GeneratorPSet.SeedComparitorPSet.ComponentName = 'LowPtClusterShapeSeedComparitor'
-
+lowPtTripletStepSeeds.ClusterCheckPSet.doClusterCheck = cms.bool(False)
+lowPtTripletStepSeeds.OrderedHitsFactoryPSet.GeneratorPSet.maxElement = cms.uint32(0)
 
 # QUALITY CUTS DURING TRACK BUILDING
 import TrackingTools.TrajectoryFiltering.TrajectoryFilterESProducer_cfi
@@ -89,7 +97,6 @@ lowPtTripletStepTrackCandidates = RecoTracker.CkfPattern.CkfTrackCandidates_cfi.
     ### these two parameters are relevant only for the CachingSeedCleanerBySharedInput
     numHitsForSeedCleaner = cms.int32(50),
     onlyPixelHitsForSeedCleaner = cms.bool(True),
-
     TrajectoryBuilder = 'lowPtTripletStepTrajectoryBuilder',
     doSeedingRegionRebuilding = True,
     useHitsSplitting = True
@@ -99,14 +106,15 @@ lowPtTripletStepTrackCandidates = RecoTracker.CkfPattern.CkfTrackCandidates_cfi.
 import RecoTracker.TrackProducer.TrackProducer_cfi
 lowPtTripletStepTracks = RecoTracker.TrackProducer.TrackProducer_cfi.TrackProducer.clone(
     src = 'lowPtTripletStepTrackCandidates',
-    AlgorithmName = cms.string('iter1'),
-    Fitter = cms.string('FlexibleKFFittingSmoother')
+    AlgorithmName = cms.string('iter3'),
+    Fitter = cms.string('FlexibleKFFittingSmoother'),
+    TTRHBuilder=cms.string('WithTrackAngle')
     )
 
 from TrackingTools.TrajectoryCleaning.TrajectoryCleanerBySharedHits_cfi import trajectoryCleanerBySharedHits
 lowPtTripletStepTrajectoryCleanerBySharedHits = trajectoryCleanerBySharedHits.clone(
         ComponentName = cms.string('lowPtTripletStepTrajectoryCleanerBySharedHits'),
-            fractionShared = cms.double(0.16),
+            fractionShared = cms.double(0.09),
             allowSharedFirstHit = cms.bool(True)
             )
 lowPtTripletStepTrackCandidates.TrajectoryCleaner = 'lowPtTripletStepTrajectoryCleanerBySharedHits'
@@ -115,19 +123,44 @@ lowPtTripletStepTrackCandidates.TrajectoryCleaner = 'lowPtTripletStepTrajectoryC
 import RecoTracker.FinalTrackSelectors.multiTrackSelector_cfi
 lowPtTripletStepSelector = RecoTracker.FinalTrackSelectors.multiTrackSelector_cfi.multiTrackSelector.clone(
     src='lowPtTripletStepTracks',
-    useAnyMVA = cms.bool(True),
-    GBRForestLabel = cms.string('MVASelectorIter1'),
     trackSelectors= cms.VPSet(
         RecoTracker.FinalTrackSelectors.multiTrackSelector_cfi.looseMTS.clone(
             name = 'lowPtTripletStepLoose',
+            chi2n_par = 1.2,
+            res_par = ( 0.003, 0.002 ),
+            minNumberLayers = 3,
+            maxNumberLostLayers = 2,
+            minNumber3DLayers = 3,
+            d0_par1 = ( 0.7, 4.0 ),
+            dz_par1 = ( 0.6, 4.0 ),
+            d0_par2 = ( 0.5, 4.0 ),
+            dz_par2 = ( 0.5, 4.0 )
             ), #end of pset
         RecoTracker.FinalTrackSelectors.multiTrackSelector_cfi.tightMTS.clone(
             name = 'lowPtTripletStepTight',
             preFilterName = 'lowPtTripletStepLoose',
+            chi2n_par = 0.7,
+            res_par = ( 0.003, 0.002 ),
+            minNumberLayers = 3,
+            maxNumberLostLayers = 2,
+            minNumber3DLayers = 3,
+            d0_par1 = ( 0.6, 4.0 ),
+            dz_par1 = ( 0.5, 4.0 ),
+            d0_par2 = ( 0.4, 4.0 ),
+            dz_par2 = ( 0.4, 4.0 )
             ),
         RecoTracker.FinalTrackSelectors.multiTrackSelector_cfi.highpurityMTS.clone(
             name = 'lowPtTripletStep',
             preFilterName = 'lowPtTripletStepTight',
+            chi2n_par = 0.4,
+            res_par = ( 0.003, 0.001 ),
+            minNumberLayers = 3,
+            maxNumberLostLayers = 2,
+            minNumber3DLayers = 3,
+            d0_par1 = ( 0.5, 4.0 ),
+            dz_par1 = ( 0.4, 4.0 ),
+            d0_par2 = ( 0.3, 4.0 ),
+            dz_par2 = ( 0.35, 4.0 )
             ),
         ) #end of vpset
     ) #end of clone

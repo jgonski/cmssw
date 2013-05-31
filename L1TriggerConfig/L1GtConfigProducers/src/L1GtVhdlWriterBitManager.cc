@@ -62,9 +62,9 @@ L1GtVhdlWriterBitManager::L1GtVhdlWriterBitManager()
 }
 
 
-std::string L1GtVhdlWriterBitManager::readMapInverse(std::map<std::string,std::string> map,std::string value)
+std::string L1GtVhdlWriterBitManager::readMapInverse(const std::map<std::string,std::string>& map,std::string value)
 {
-	std::map<std::string,std::string>::iterator iter = map.begin();
+	std::map<std::string,std::string>::const_iterator iter = map.begin();
 	while (iter!=map.end())
 	{
 		if ((*iter).second == value)

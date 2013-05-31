@@ -11,16 +11,25 @@ from RecoTracker.TkSeedGenerator.GlobalSeedsFromTriplets_cff import *
 from RecoTracker.TkTrackingRegions.GlobalTrackingRegionFromBeamSpot_cfi import RegionPsetFomBeamSpotBlock
 initialStepSeeds = RecoTracker.TkSeedGenerator.GlobalSeedsFromTriplets_cff.globalSeedsFromTriplets.clone(
     RegionFactoryPSet = RegionPsetFomBeamSpotBlock.clone(
-    ComponentName = cms.string('GlobalRegionProducerFromBeamSpot'),
-    RegionPSet = RegionPsetFomBeamSpotBlock.RegionPSet.clone(
-    ptMin = 0.6,
-    originRadius = 0.02,
-    nSigmaZ = 4.0
+        ComponentName = cms.string('GlobalRegionProducerFromBeamSpot'),
+        RegionPSet = RegionPsetFomBeamSpotBlock.RegionPSet.clone(
+            ptMin = 0.8,
+            originRadius = 0.02,
+            nSigmaZ = 4.0
+            )
+    ),
+    SeedMergerPSet = cms.PSet(
+        layerListName = cms.string('PixelSeedMergerQuadruplets'),
+	addRemainingTriplets = cms.bool(False),
+	mergeTriplets = cms.bool(True),
+	ttrhBuilderLabel = cms.string('PixelTTRHBuilderWithoutAngle')
     )
-    )
-    )
+)
+
 from RecoPixelVertexing.PixelLowPtUtilities.ClusterShapeHitFilterESProducer_cfi import *
 initialStepSeeds.OrderedHitsFactoryPSet.GeneratorPSet.SeedComparitorPSet.ComponentName = 'LowPtClusterShapeSeedComparitor'
+initialStepSeeds.ClusterCheckPSet.doClusterCheck = cms.bool(False)
+initialStepSeeds.OrderedHitsFactoryPSet.GeneratorPSet.maxElement = cms.uint32(0)
 
 # building
 import TrackingTools.TrajectoryFiltering.TrajectoryFilterESProducer_cfi
@@ -56,7 +65,6 @@ initialStepTrackCandidates = RecoTracker.CkfPattern.CkfTrackCandidates_cfi.ckfTr
     ### these two parameters are relevant only for the CachingSeedCleanerBySharedInput
     numHitsForSeedCleaner = cms.int32(50),
     onlyPixelHitsForSeedCleaner = cms.bool(True),
-
     TrajectoryBuilder = 'initialStepTrajectoryBuilder',
     doSeedingRegionRebuilding = True,
     useHitsSplitting = True
@@ -67,26 +75,52 @@ import RecoTracker.TrackProducer.TrackProducer_cfi
 initialStepTracks = RecoTracker.TrackProducer.TrackProducer_cfi.TrackProducer.clone(
     src = 'initialStepTrackCandidates',
     AlgorithmName = cms.string('iter0'),
-    Fitter = cms.string('FlexibleKFFittingSmoother')
-    )
+    Fitter = cms.string('FlexibleKFFittingSmoother'),
+    TTRHBuilder=cms.string('WithTrackAngle')
+)
 
 # Final selection
 import RecoTracker.FinalTrackSelectors.multiTrackSelector_cfi
 initialStepSelector = RecoTracker.FinalTrackSelectors.multiTrackSelector_cfi.multiTrackSelector.clone(
     src='initialStepTracks',
-    useAnyMVA = cms.bool(True),
-    GBRForestLabel = cms.string('MVASelectorIter0'),
     trackSelectors= cms.VPSet(
         RecoTracker.FinalTrackSelectors.multiTrackSelector_cfi.looseMTS.clone(
             name = 'initialStepLoose',
+            chi2n_par = 2.0,
+            res_par = ( 0.003, 0.002 ),
+            minNumberLayers = 3,
+            maxNumberLostLayers = 3,
+            minNumber3DLayers = 3,
+            d0_par1 = ( 0.7, 4.0 ),
+            dz_par1 = ( 0.8, 4.0 ),
+            d0_par2 = ( 0.4, 4.0 ),
+            dz_par2 = ( 0.6, 4.0 )
             ), #end of pset
         RecoTracker.FinalTrackSelectors.multiTrackSelector_cfi.tightMTS.clone(
             name = 'initialStepTight',
             preFilterName = 'initialStepLoose',
+            chi2n_par = 1.0,
+            res_par = ( 0.003, 0.002 ),
+            minNumberLayers = 3,
+            maxNumberLostLayers = 2,
+            minNumber3DLayers = 3,
+            d0_par1 = ( 0.6, 4.0 ),
+            dz_par1 = ( 0.7, 4.0 ),
+            d0_par2 = ( 0.35, 4.0 ),
+            dz_par2 = ( 0.5, 4.0 )
             ),
         RecoTracker.FinalTrackSelectors.multiTrackSelector_cfi.highpurityMTS.clone(
             name = 'initialStep',
             preFilterName = 'initialStepTight',
+            chi2n_par = 0.7,
+            res_par = ( 0.003, 0.001 ),
+            minNumberLayers = 3,
+            maxNumberLostLayers = 2,
+            minNumber3DLayers = 3,
+            d0_par1 = ( 0.5, 4.0 ),
+            dz_par1 = ( 0.7, 4.0 ),
+            d0_par2 = ( 0.25, 4.0 ),
+            dz_par2 = ( 0.4, 4.0 )
             ),
         ) #end of vpset
     ) #end of clone

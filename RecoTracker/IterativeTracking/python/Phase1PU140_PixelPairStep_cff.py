@@ -4,9 +4,9 @@ import FWCore.ParameterSet.Config as cms
 # NEW CLUSTERS (remove previously used clusters)
 pixelPairStepClusters = cms.EDProducer("TrackClusterRemover",
     clusterLessSolution = cms.bool(True),
-    oldClusterRemovalInfo = cms.InputTag("lowPtTripletStepClusters"),
-    trajectories = cms.InputTag("lowPtTripletStepTracks"),
-    overrideTrkQuals = cms.InputTag('lowPtTripletStepSelector','lowPtTripletStep'),
+    oldClusterRemovalInfo = cms.InputTag("detachedQuadStepClusters"),
+    trajectories = cms.InputTag("detachedQuadStepTracks"),
+    overrideTrkQuals = cms.InputTag('detachedQuadStep'),
     TrackQuality = cms.string('highPurity'),
     minNumberOfLayersWithMeasBeforeFiltering = cms.int32(0),
     pixelClusters = cms.InputTag("siPixelClusters"),
@@ -19,10 +19,12 @@ pixelPairStepClusters = cms.EDProducer("TrackClusterRemover",
 # SEEDING LAYERS
 pixelPairStepSeedLayers = cms.ESProducer("SeedingLayersESProducer",
     ComponentName = cms.string('pixelPairStepSeedLayers'),
-    layerList = cms.vstring('BPix1+BPix2', 'BPix1+BPix3', 'BPix2+BPix3', 
-        'BPix1+FPix1_pos', 'BPix1+FPix1_neg', 
-        'BPix2+FPix1_pos', 'BPix2+FPix1_neg', 
-        'FPix1_pos+FPix2_pos', 'FPix1_neg+FPix2_neg'),
+    layerList = cms.vstring('BPix1+BPix2', 'BPix1+BPix3', 'BPix2+BPix3',
+                            'BPix2+BPix4', 'BPix3+BPix4',
+                            'BPix1+FPix1_pos', 'BPix1+FPix1_neg',
+                            'BPix2+FPix1_pos', 'BPix2+FPix1_neg', 
+                            'FPix1_pos+FPix2_pos', 'FPix1_neg+FPix2_neg',
+                            'FPix2_pos+FPix3_pos', 'FPix2_neg+FPix3_neg'),
     BPix = cms.PSet(
         useErrorsFromParam = cms.bool(True),
         hitErrorRPhi = cms.double(0.0027),
@@ -44,7 +46,7 @@ pixelPairStepSeedLayers = cms.ESProducer("SeedingLayersESProducer",
 # SEEDS
 import RecoTracker.TkSeedGenerator.GlobalSeedsFromPairsWithVertices_cff
 pixelPairStepSeeds = RecoTracker.TkSeedGenerator.GlobalSeedsFromPairsWithVertices_cff.globalSeedsFromPairsWithVertices.clone()
-pixelPairStepSeeds.RegionFactoryPSet.RegionPSet.ptMin = 0.6
+pixelPairStepSeeds.RegionFactoryPSet.RegionPSet.ptMin = 1.5
 pixelPairStepSeeds.RegionFactoryPSet.RegionPSet.originRadius = 0.015
 pixelPairStepSeeds.RegionFactoryPSet.RegionPSet.fixedError = 0.03
 pixelPairStepSeeds.OrderedHitsFactoryPSet.SeedingLayers = cms.string('pixelPairStepSeedLayers')
@@ -56,12 +58,16 @@ pixelPairStepSeeds.SeedComparitorPSet = cms.PSet(
         FilterStripHits = cms.bool(False),
         ClusterShapeHitFilterName = cms.string('ClusterShapeHitFilter')
     )
+pixelPairStepSeeds.ClusterCheckPSet.doClusterCheck = cms.bool(False)
+pixelPairStepSeeds.OrderedHitsFactoryPSet.maxElement =  cms.uint32(0)
 
 # QUALITY CUTS DURING TRACK BUILDING
 import TrackingTools.TrajectoryFiltering.TrajectoryFilterESProducer_cfi
 pixelPairStepTrajectoryFilter = TrackingTools.TrajectoryFiltering.TrajectoryFilterESProducer_cfi.trajectoryFilterESProducer.clone(
     ComponentName = 'pixelPairStepTrajectoryFilter',
     filterPset = TrackingTools.TrajectoryFiltering.TrajectoryFilterESProducer_cfi.trajectoryFilterESProducer.filterPset.clone(
+    maxLostHitsFraction = cms.double(1./10.),
+    constantValueForLostHitsFractionFilter = cms.double(0.701),
     minimumNumberOfHits = 3,
     minPt = 0.1
     )
@@ -94,37 +100,68 @@ pixelPairStepTrackCandidates = RecoTracker.CkfPattern.CkfTrackCandidates_cfi.ckf
     TrajectoryBuilder = 'pixelPairStepTrajectoryBuilder',
     ### these two parameters are relevant only for the CachingSeedCleanerBySharedInput
     numHitsForSeedCleaner = cms.int32(50),
-    onlyPixelHitsForSeedCleaner = cms.bool(True),
-
+    onlyPixelHitsForSeedCleaner = cms.bool(True)
 )
 
+from TrackingTools.TrajectoryCleaning.TrajectoryCleanerBySharedHits_cfi import trajectoryCleanerBySharedHits
+pixelPairStepTrajectoryCleanerBySharedHits = trajectoryCleanerBySharedHits.clone(
+        ComponentName = cms.string('pixelPairStepTrajectoryCleanerBySharedHits'),
+            fractionShared = cms.double(0.09),
+            allowSharedFirstHit = cms.bool(True)
+            )
+pixelPairStepTrackCandidates.TrajectoryCleaner = 'pixelPairStepTrajectoryCleanerBySharedHits'
 
 # TRACK FITTING
 import RecoTracker.TrackProducer.TrackProducer_cfi
 pixelPairStepTracks = RecoTracker.TrackProducer.TrackProducer_cfi.TrackProducer.clone(
-    AlgorithmName = cms.string('iter2'),
+    AlgorithmName = cms.string('iter5'),
     src = 'pixelPairStepTrackCandidates',
-    Fitter = cms.string('FlexibleKFFittingSmoother')
+    Fitter = cms.string('FlexibleKFFittingSmoother'),
+    TTRHBuilder=cms.string('WithTrackAngle')
     )
 
 # Final selection
-import RecoTracker.IterativeTracking.LowPtTripletStep_cff
 import RecoTracker.FinalTrackSelectors.multiTrackSelector_cfi
 pixelPairStepSelector = RecoTracker.FinalTrackSelectors.multiTrackSelector_cfi.multiTrackSelector.clone(
     src='pixelPairStepTracks',
-    useAnyMVA = cms.bool(True),
-    GBRForestLabel = cms.string('MVASelectorIter2'),
     trackSelectors= cms.VPSet(
         RecoTracker.FinalTrackSelectors.multiTrackSelector_cfi.looseMTS.clone(
             name = 'pixelPairStepLoose',
+            chi2n_par = 0.7,
+            res_par = ( 0.003, 0.002 ),
+            minNumberLayers = 3,
+            maxNumberLostLayers = 2,
+            minNumber3DLayers = 3,
+            d0_par1 = ( 0.3, 4.0 ),
+            dz_par1 = ( 0.35, 4.0 ),
+            d0_par2 = ( 0.35, 4.0 ),
+            dz_par2 = ( 0.35, 4.0 )
             ), #end of pset
         RecoTracker.FinalTrackSelectors.multiTrackSelector_cfi.tightMTS.clone(
             name = 'pixelPairStepTight',
             preFilterName = 'pixelPairStepLoose',
+            chi2n_par = 0.5,
+            res_par = ( 0.003, 0.002 ),
+            minNumberLayers = 4,
+            maxNumberLostLayers = 2,
+            minNumber3DLayers = 3,
+            d0_par1 = ( 0.2, 4.0 ),
+            dz_par1 = ( 0.25, 4.0 ),
+            d0_par2 = ( 0.25, 4.0 ),
+            dz_par2 = ( 0.25, 4.0 )
             ),
         RecoTracker.FinalTrackSelectors.multiTrackSelector_cfi.highpurityMTS.clone(
             name = 'pixelPairStep',
             preFilterName = 'pixelPairStepTight',
+            chi2n_par = 0.25,
+            res_par = ( 0.003, 0.001 ),
+            minNumberLayers = 5,
+            maxNumberLostLayers = 1,
+            minNumber3DLayers = 4,
+            d0_par1 = ( 0.15, 4.0 ),
+            dz_par1 = ( 0.2, 4.0 ),
+            d0_par2 = ( 0.2, 4.0 ),
+            dz_par2 = ( 0.2, 4.0 )
             ),
         ) #end of vpset
     ) #end of clone
