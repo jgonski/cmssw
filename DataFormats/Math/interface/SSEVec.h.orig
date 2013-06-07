@@ -822,12 +822,12 @@ inline double cross(mathSSE::Vec2D a, mathSSE::Vec2D b) {
 // double op 3d
 
 
-//#ifdef __SSE3__
+#ifdef __SSE3__
 // consistent with AVX...
 inline mathSSE::Vec4D hadd(mathSSE::Vec4D a, mathSSE::Vec4D b) {
     return  mathSSE::Vec4D(hadd(mathSSE::Vec2D(a.vec[0]),mathSSE::Vec2D(b.vec[0])),hadd(mathSSE::Vec2D(a.vec[1]),mathSSE::Vec2D(b.vec[1])) );
 }
-//#endif
+#endif
 
 
 inline bool operator==(mathSSE::Vec4D a, mathSSE::Vec4D b) {
