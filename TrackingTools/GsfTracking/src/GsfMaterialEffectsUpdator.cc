@@ -27,8 +27,13 @@ GsfMaterialEffectsUpdator::updateState (const TrajectoryStateOnSurface& TSoS,
   //
   // Get components (will force recalculation, if necessary)
   //
+#ifdef __clang__
+  std::vector<Effect> effects{size()};
+  compute(TSoS,propDir,&effects[0]);
+#else
   Effect effects[size()];
   compute(TSoS,propDir,effects);
+#endif
 
   //
   // prepare output vector
