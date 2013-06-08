@@ -121,11 +121,8 @@ GsfBetheHeitlerUpdator::compute (const TrajectoryStateOnSurface& TSoS,
     //
     if ( rl<0.01f )  rl = 0.01f;
     if ( rl>0.20f )  rl = 0.20f;
-#ifdef __clang__
-    GSContainer *mixture = new GSContainer[theNrComponents];
-#else
+
     GSContainer mixture[theNrComponents];
-#endif
     getMixtureParameters(rl,mixture);
     correctWeights(mixture);
     if ( theCorrectionFlag>=1 )
@@ -158,9 +155,6 @@ GsfBetheHeitlerUpdator::compute (const TrajectoryStateOnSurface& TSoS,
       using namespace materialEffect;
       effects[i].deltaCov[elos] +=  varPinv;
     }
-#ifdef __clang__
-    delete[] mixture;
-#endif
   }
 }
 //
