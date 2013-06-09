@@ -132,7 +132,11 @@ EgammaTowerIsolationNew<NC>::EgammaTowerIsolationNew(float extRadius[NC],
   
   // sort in eta  (kd-tree anoverkill,does not vectorize...)
   uint32_t index[nt];
+#ifdef __clang__
+  float *e = (float*)alloca(nt);
+#else
   float e[nt];
+#endif
   for (std::size_t k=0; k!=nt; ++k) {
     e[k]=towers[k].eta();
     index[k]=k;
