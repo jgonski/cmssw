@@ -9,6 +9,9 @@ related:
 ---
 # CMS UserCode Migration FAQs
 
+* auto-gen TOC:
+{:toc}
+
 ## What is happening?
 
 Just like CMSSW, UserCode repositories will have to migrate away from
