@@ -63,8 +63,9 @@ This can be done by simply going to [https://github.com/new](https://github.com/
 Click on "Create Repository" and note down the URL of your newly created
 repository.
 
-Now you want to migrate your old `UserCode` area to git. This can be done
-from inside a CMSSW (`CMSSW_6_2_X or later`) release on `lxplus` by doing:
+Now you want to migrate your old `UserCode` area to git. This can be done from
+inside a CMSSW release (`CMSSW_5_3_11` or `CMSSW_6_2_0_pre7` and subsequent
+ones) on `lxplus5` (`lxplus6` also should work) by doing:
 
     MYUSERCODE=Eulisse
     cvs2git --blobfile=git-blob.dat --dumpfile=git-dump.dat \
