@@ -118,6 +118,23 @@ Usage](advanced-usage) section.
 Please [leave us a comment][new-faq-form] and we will make the CVS repository
 read-only.
 
+## I need to collaborate with some fellow physicists!
+
+GitHub has to possible ways of dealing with this.
+
+* The first and easier one, suitable for small (2-5) group of people is to add
+  your collaborators as such to your repository. Please have a look at:
+  <https://help.github.com/articles/how-do-i-add-a-collaborator> to see how to
+  do it.
+
+* The second, suitable for larger groups is to create an "Organization" and put
+  the repository under it. This is what is done for example for Computing
+  Projects, which all belong to the [dmwm](https://github.com/dmwm)
+  organization. The main advantage of organizations is that they provide much
+  more flexible organization of contributors in terms of "Teams" with different
+  commit rights.  To learn more about organizations please have a look at
+  <https://github.com/blog/674-introducing-organizations>.
+
 ## Does this affect physics notes?
 
 No. They are hosted in SVN and this will continue to be the case.
