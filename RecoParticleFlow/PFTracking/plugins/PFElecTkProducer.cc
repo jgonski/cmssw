@@ -430,7 +430,7 @@ PFElecTkProducer::createGsfPFRecTrackRef(const edm::OrphanHandle<reco::GsfPFRecT
 // ------------- method for find the corresponding kf pfrectrack ---------------------
 int
 PFElecTkProducer::FindPfRef(const reco::PFRecTrackCollection  & PfRTkColl, 
-			    const reco::GsfTrack& gsftk,
+			    reco::GsfTrack gsftk,
 			    bool otherColl){
 
 
@@ -550,7 +550,7 @@ bool PFElecTkProducer::isFifthStep(reco::PFRecTrackRef pfKfTrack) {
 }
 // -- method to apply gsf electron selection to EcalDriven seeds
 bool 
-PFElecTkProducer::applySelection(const reco::GsfTrack& gsftk) {
+PFElecTkProducer::applySelection(reco::GsfTrack gsftk) {
   if (&(*gsftk.seedRef())==0) return false;
   ElectronSeedRef ElSeedRef=gsftk.extra()->seedRef().castTo<ElectronSeedRef>();
 

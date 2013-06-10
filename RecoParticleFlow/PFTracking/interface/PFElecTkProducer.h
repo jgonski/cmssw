@@ -50,11 +50,11 @@ class PFElecTkProducer : public edm::EDProducer {
 
     
       int FindPfRef(const reco::PFRecTrackCollection & PfRTkColl, 
-		    const reco::GsfTrack&, bool);
+		    reco::GsfTrack, bool);
       
       bool isFifthStep(reco::PFRecTrackRef pfKfTrack);
 
-      bool applySelection(const reco::GsfTrack&);
+      bool applySelection(reco::GsfTrack);
       
       bool resolveGsfTracks(const std::vector<reco::GsfPFRecTrack> &GsfPFVec,
 			    unsigned int ngsf,

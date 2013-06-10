@@ -3,8 +3,8 @@
  *  Class to load the product in the event
  *
 
- *  $Date: 2013/05/30 21:33:02 $
- *  $Revision: 1.90 $
+ *  $Date: 2012/08/16 16:26:08 $
+ *  $Revision: 1.89 $
 
  *  \author R. Bellan - INFN Torino <riccardo.bellan@cern.ch>
  */
@@ -406,7 +406,7 @@ MuonTrackLoader::loadTracks(const CandidateContainer& muonCands,
 
 OrphanHandle<reco::TrackCollection> 
 MuonTrackLoader::loadTracks(const TrajectoryContainer& trajectories,
-			    Event& event, const std::vector<std::pair<Trajectory*,reco::TrackRef> >& miniMap, const string& instance, bool reallyDoSmoothing) {
+			    Event& event, std::vector<std::pair<Trajectory*,reco::TrackRef> > miniMap, const string& instance, bool reallyDoSmoothing) {
   
   const bool doSmoothing = theSmoothingStep && reallyDoSmoothing;
   

@@ -114,9 +114,7 @@ write_report_plots(std::string name, LA_Filler_Fitter::Method method, GRANULARIT
 
 template <class T>
 void MeasureLA::
-write_report_text(std::string name, const LA_Filler_Fitter::Method& _method, const std::map<T,LA_Filler_Fitter::Result>& _results) const {
-  LA_Filler_Fitter::Method method = _method;
-  std::map<T,LA_Filler_Fitter::Result>results = _results;
+write_report_text(std::string name, LA_Filler_Fitter::Method method, std::map<T,LA_Filler_Fitter::Result> results) const {
   fstream file((name+".dat").c_str(),std::ios::out);
   std::pair<T,LA_Filler_Fitter::Result> result;
   BOOST_FOREACH(result, results) {

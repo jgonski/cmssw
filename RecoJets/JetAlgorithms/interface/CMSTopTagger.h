@@ -94,7 +94,7 @@ protected:
 /// be a friend.
 class CMSTopTaggerStructure : public JHTopTaggerStructure {
 public:
-  CMSTopTaggerStructure(const std::vector<PseudoJet>& pieces,
+  CMSTopTaggerStructure(std::vector<PseudoJet> pieces,
       const JetDefinition::Recombiner *recombiner = 0)
     : JHTopTaggerStructure(pieces, recombiner) {}
 

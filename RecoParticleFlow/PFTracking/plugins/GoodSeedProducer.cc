@@ -589,7 +589,7 @@ GoodSeedProducer::getBin(float eta, float pt){
 }
 
 void 
-GoodSeedProducer::PSforTMVA(const XYZTLorentzVector& mom,const XYZTLorentzVector& pos ){
+GoodSeedProducer::PSforTMVA(XYZTLorentzVector mom,XYZTLorentzVector pos ){
 
   BaseParticlePropagator OutParticle(RawParticle(mom,pos)
 				     ,0.,0.,B_.z()) ;

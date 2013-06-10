@@ -24,10 +24,10 @@ class L1GctJetFinderParams
 		       double mhtJetEtThresh,
                        unsigned etaBoundary, 
 		       unsigned corrType,
-		       const std::vector< std::vector<double> >& jetCorrCoeffs,
-		       const std::vector< std::vector<double> >& tauCorrCoeffs,
+		       std::vector< std::vector<double> > jetCorrCoeffs,
+		       std::vector< std::vector<double> > tauCorrCoeffs,
 		       bool convertToEnergy,
-		       const std::vector<double>& energyConvCoeffs);
+		       std::vector<double> energyConvCoeffs);
 
   ~L1GctJetFinderParams();
 

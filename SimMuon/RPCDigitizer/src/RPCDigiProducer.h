@@ -30,7 +30,7 @@ public:
   /**Produces the EDM products,*/
   virtual void produce(edm::Event& e, const edm::EventSetup& c) override;
 
-  void setRPCSetUp(const std::vector<RPCStripNoises::NoiseItem>&, const std::vector<double>&);
+  void setRPCSetUp(std::vector<RPCStripNoises::NoiseItem>, std::vector<double>);
 
 private:
 

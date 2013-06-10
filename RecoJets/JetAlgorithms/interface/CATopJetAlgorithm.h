@@ -45,7 +45,7 @@ class CATopJetAlgorithm{
  public:
   /** Constructor
   */
-  CATopJetAlgorithm(const edm::InputTag& mSrc,
+  CATopJetAlgorithm(edm::InputTag mSrc,
 		    bool   verbose,
 		    int algorithm,
 		    int useAdjacency,
