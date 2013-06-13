@@ -176,7 +176,11 @@ git. This is not currently the case though.
 
 ## Will you migrate all the per package tags?
 
-No. Per package tags will not be migrated.
+No. Per package tags will not be migrated. You can however have a look at the
+[Dealing with CVS History page](cvs-interaction.html) to see how you can get
+old tags which were not in any release. This will also be useful to import
+packages which did not end up in any release.
+
 
 ## Do you have any more in-depth FAQs?
 
